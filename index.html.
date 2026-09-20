@@ -24,7 +24,7 @@
                 <p class="text-sm text-slate-500 mt-1">Real-time Monitoring Penjualan 1 Juta Transaction (Parquet Aggregation Data)</p>
             </div>
             <div class="mt-4 md:mt-0 flex items-center space-x-2">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                <span id="connection-status" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
                     ● Live Connected
                 </span>
             </div>
@@ -52,7 +52,6 @@
 
         <!-- Charts Row 1 -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Trend Line Chart -->
             <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h2 class="text-base font-semibold text-slate-800 mb-4">📈 Tren Penjualan Bulanan (September Drop Analysis)</h2>
                 <div class="relative h-72">
@@ -60,7 +59,6 @@
                 </div>
             </div>
 
-            <!-- Category Margin Bar Chart -->
             <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h2 class="text-base font-semibold text-slate-800 mb-4">⚖️ Profit Margin per Kategori (%)</h2>
                 <div class="relative h-72">
@@ -71,7 +69,6 @@
 
         <!-- Charts Row 2 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Dairy Loss Anomaly -->
             <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h2 class="text-base font-semibold text-slate-800 mb-4">⚠️ Top SKU Dairy Margin Rugi (Pricing Anomaly)</h2>
                 <div class="relative h-64">
@@ -79,7 +76,6 @@
                 </div>
             </div>
 
-            <!-- Stock-out frequency -->
             <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <h2 class="text-base font-semibold text-slate-800 mb-4">🔴 Frekuensi Stock-Out per Kota</h2>
                 <div class="relative h-64">
@@ -88,7 +84,7 @@
             </div>
         </div>
 
-        <!-- Data Table Transaksi Rugi -->
+        <!-- Data Table -->
         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <h2 class="text-base font-semibold text-slate-800 mb-4">📋 Sampel Transaksi Margin Negatif (Rugi)</h2>
             <div class="overflow-x-auto">
@@ -106,7 +102,6 @@
                         </tr>
                     </thead>
                     <tbody id="table-body" class="divide-y divide-slate-100">
-                        <!-- Data injected via JS -->
                     </tbody>
                 </table>
             </div>
@@ -114,9 +109,7 @@
 
     </div>
 
-    <!-- Script Load Data JSON -->
     <script>
-        // Formatter Helper
         function formatRupiah(val) {
             if (Math.abs(val) >= 1e12) return 'Rp ' + (val / 1e12).toFixed(2) + ' T';
             if (Math.abs(val) >= 1e9) return 'Rp ' + (val / 1e9).toFixed(2) + ' M';
@@ -130,17 +123,22 @@
             return val.toLocaleString('id-ID') + ' pcs';
         }
 
-        // Fetch Data dari JSON
-        fetch('dashboard_data.json')
-            .then(response => response.json())
+        // Fetch data dengan penanganan relative path
+        fetch('./dashboard_data.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Gagal mengambil file JSON (Status: " + response.status + ")");
+                }
+                return response.json();
+            })
             .then(data => {
-                // 1. Populate KPI Cards
+                // Populate KPI Cards
                 document.getElementById('kpi-sales').innerText = formatRupiah(data.kpi.total_sales);
                 document.getElementById('kpi-profit').innerText = formatRupiah(data.kpi.total_profit);
                 document.getElementById('kpi-margin').innerText = data.kpi.margin_pct.toFixed(2) + '%';
                 document.getElementById('kpi-units').innerText = formatUnit(data.kpi.total_units);
 
-                // 2. Trend Chart
+                // Trend Chart
                 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
                 const years = [...new Set(data.monthly_trend.map(item => item.year))];
                 
@@ -167,7 +165,7 @@
                     options: { responsive: true, maintainAspectRatio: false }
                 });
 
-                // 3. Category Margin Chart
+                // Category Margin Chart
                 new Chart(document.getElementById('categoryChart'), {
                     type: 'bar',
                     data: {
@@ -181,7 +179,7 @@
                     options: { responsive: true, maintainAspectRatio: false }
                 });
 
-                // 4. Dairy Loss Chart
+                // Dairy Loss Chart
                 new Chart(document.getElementById('dairyLossChart'), {
                     type: 'bar',
                     data: {
@@ -195,7 +193,7 @@
                     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
                 });
 
-                // 5. Stockout Chart
+                // Stockout Chart
                 new Chart(document.getElementById('stockoutChart'), {
                     type: 'bar',
                     data: {
@@ -209,7 +207,7 @@
                     options: { responsive: true, maintainAspectRatio: false }
                 });
 
-                // 6. Populate Table Transaksi Rugi
+                // Table Data
                 const tbody = document.getElementById('table-body');
                 tbody.innerHTML = '';
                 data.loss_table.forEach(row => {
@@ -228,7 +226,12 @@
                     tbody.appendChild(tr);
                 });
             })
-            .catch(err => console.error("Error loading JSON:", err));
+            .catch(err => {
+                console.error("Error loading JSON:", err);
+                const statusBadge = document.getElementById('connection-status');
+                statusBadge.className = "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800";
+                statusBadge.innerText = "✖ JSON Data Failed";
+            });
     </script>
 </body>
 </html>
