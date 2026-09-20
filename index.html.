@@ -123,7 +123,6 @@
             return val.toLocaleString('id-ID') + ' pcs';
         }
 
-        // Fetch data dengan penanganan relative path
         fetch('./dashboard_data.json')
             .then(response => {
                 if (!response.ok) {
@@ -132,13 +131,11 @@
                 return response.json();
             })
             .then(data => {
-                // Populate KPI Cards
                 document.getElementById('kpi-sales').innerText = formatRupiah(data.kpi.total_sales);
                 document.getElementById('kpi-profit').innerText = formatRupiah(data.kpi.total_profit);
                 document.getElementById('kpi-margin').innerText = data.kpi.margin_pct.toFixed(2) + '%';
                 document.getElementById('kpi-units').innerText = formatUnit(data.kpi.total_units);
 
-                // Trend Chart
                 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
                 const years = [...new Set(data.monthly_trend.map(item => item.year))];
                 
@@ -165,7 +162,6 @@
                     options: { responsive: true, maintainAspectRatio: false }
                 });
 
-                // Category Margin Chart
                 new Chart(document.getElementById('categoryChart'), {
                     type: 'bar',
                     data: {
@@ -179,7 +175,6 @@
                     options: { responsive: true, maintainAspectRatio: false }
                 });
 
-                // Dairy Loss Chart
                 new Chart(document.getElementById('dairyLossChart'), {
                     type: 'bar',
                     data: {
@@ -193,7 +188,6 @@
                     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
                 });
 
-                // Stockout Chart
                 new Chart(document.getElementById('stockoutChart'), {
                     type: 'bar',
                     data: {
@@ -207,7 +201,6 @@
                     options: { responsive: true, maintainAspectRatio: false }
                 });
 
-                // Table Data
                 const tbody = document.getElementById('table-body');
                 tbody.innerHTML = '';
                 data.loss_table.forEach(row => {
