@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FMCG Executive Performance Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased p-6">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">📊 FMCG Executive Performance Dashboard</h1>
+                <p class="text-sm text-slate-500 mt-1">Real-time Monitoring Penjualan 1 Juta Transaction (Parquet Aggregation Data)</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex items-center space-x-2">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                    ● Live Connected
+                </span>
+            </div>
+        </div>
+
+        <!-- Top KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Net Sales</p>
+                <h3 id="kpi-sales" class="text-2xl font-bold text-slate-900 mt-2">Loading...</h3>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Profit Kotor</p>
+                <h3 id="kpi-profit" class="text-2xl font-bold text-emerald-600 mt-2">Loading...</h3>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Profit Margin</p>
+                <h3 id="kpi-margin" class="text-2xl font-bold text-blue-600 mt-2">Loading...</h3>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Unit Terjual</p>
+                <h3 id="kpi-units" class="text-2xl font-bold text-indigo-600 mt-2">Loading...</h3>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Trend Line Chart -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-base font-semibold text-slate-800 mb-4">📈 Tren Penjualan Bulanan (September Drop Analysis)</h2>
+                <div class="relative h-72">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Category Margin Bar Chart -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-base font-semibold text-slate-800 mb-4">⚖️ Profit Margin per Kategori (%)</h2>
+                <div class="relative h-72">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Dairy Loss Anomaly -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-base font-semibold text-slate-800 mb-4">⚠️ Top SKU Dairy Margin Rugi (Pricing Anomaly)</h2>
+                <div class="relative h-64">
+                    <canvas id="dairyLossChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Stock-out frequency -->
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <h2 class="text-base font-semibold text-slate-800 mb-4">🔴 Frekuensi Stock-Out per Kota</h2>
+                <div class="relative h-64">
+                    <canvas id="stockoutChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table Transaksi Rugi -->
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <h2 class="text-base font-semibold text-slate-800 mb-4">📋 Sampel Transaksi Margin Negatif (Rugi)</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                            <th class="p-3">Store ID</th>
+                            <th class="p-3">Kota</th>
+                            <th class="p-3">Kategori</th>
+                            <th class="p-3">SKU Name</th>
+                            <th class="p-3">List Price</th>
+                            <th class="p-3">Purchase Cost</th>
+                            <th class="p-3">Net Sales</th>
+                            <th class="p-3">Gross Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-100">
+                        <!-- Data injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script Load Data JSON -->
+    <script>
+        // Formatter Helper
+        function formatRupiah(val) {
+            if (Math.abs(val) >= 1e12) return 'Rp ' + (val / 1e12).toFixed(2) + ' T';
+            if (Math.abs(val) >= 1e9) return 'Rp ' + (val / 1e9).toFixed(2) + ' M';
+            if (Math.abs(val) >= 1e6) return 'Rp ' + (val / 1e6).toFixed(2) + ' Jt';
+            return 'Rp ' + val.toLocaleString('id-ID');
+        }
+
+        function formatUnit(val) {
+            if (val >= 1e6) return (val / 1e6).toFixed(2) + ' Juta pcs';
+            if (val >= 1e3) return (val / 1e3).toFixed(2) + ' Ribu pcs';
+            return val.toLocaleString('id-ID') + ' pcs';
+        }
+
+        // Fetch Data dari JSON
+        fetch('dashboard_data.json')
+            .then(response => response.json())
+            .then(data => {
+                // 1. Populate KPI Cards
+                document.getElementById('kpi-sales').innerText = formatRupiah(data.kpi.total_sales);
+                document.getElementById('kpi-profit').innerText = formatRupiah(data.kpi.total_profit);
+                document.getElementById('kpi-margin').innerText = data.kpi.margin_pct.toFixed(2) + '%';
+                document.getElementById('kpi-units').innerText = formatUnit(data.kpi.total_units);
+
+                // 2. Trend Chart
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                const years = [...new Set(data.monthly_trend.map(item => item.year))];
+                
+                const datasetsTrend = years.map((yr, idx) => {
+                    const yearData = data.monthly_trend.filter(d => d.year === yr);
+                    const salesArray = months.map((_, mIdx) => {
+                        const found = yearData.find(d => d.month === mIdx + 1);
+                        return found ? found.net_sales : 0;
+                    });
+                    const colors = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6'];
+                    return {
+                        label: 'Tahun ' + yr,
+                        data: salesArray,
+                        borderColor: colors[idx % colors.length],
+                        backgroundColor: colors[idx % colors.length],
+                        tension: 0.3,
+                        fill: false
+                    };
+                });
+
+                new Chart(document.getElementById('trendChart'), {
+                    type: 'line',
+                    data: { labels: months, datasets: datasetsTrend },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                // 3. Category Margin Chart
+                new Chart(document.getElementById('categoryChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.category_margin.map(d => d.category),
+                        datasets: [{
+                            label: 'Margin %',
+                            data: data.category_margin.map(d => d.margin_pct.toFixed(1)),
+                            backgroundColor: '#3b82f6'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                // 4. Dairy Loss Chart
+                new Chart(document.getElementById('dairyLossChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.dairy_loss.map(d => d.sku_name),
+                        datasets: [{
+                            label: 'Gross Profit Rugi (Rp)',
+                            data: data.dairy_loss.map(d => d.gross_profit),
+                            backgroundColor: '#ef4444'
+                        }]
+                    },
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+                });
+
+                // 5. Stockout Chart
+                new Chart(document.getElementById('stockoutChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.stockout.map(d => d.city),
+                        datasets: [{
+                            label: 'Insiden Stock-Out',
+                            data: data.stockout.map(d => d.stockout_count),
+                            backgroundColor: '#f59e0b'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                // 6. Populate Table Transaksi Rugi
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = '';
+                data.loss_table.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 text-slate-700';
+                    tr.innerHTML = `
+                        <td class="p-3 font-medium">${row.store_id}</td>
+                        <td class="p-3">${row.city}</td>
+                        <td class="p-3">${row.category}</td>
+                        <td class="p-3 font-medium text-slate-900">${row.sku_name}</td>
+                        <td class="p-3">${formatRupiah(row.list_price)}</td>
+                        <td class="p-3">${formatRupiah(row.purchase_cost)}</td>
+                        <td class="p-3">${formatRupiah(row.net_sales)}</td>
+                        <td class="p-3 font-bold text-red-600">${formatRupiah(row.gross_profit)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => console.error("Error loading JSON:", err));
+    </script>
+</body>
+</html>
