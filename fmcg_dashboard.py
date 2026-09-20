@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import os
 
-# 1. Konfigurasi Halaman Dashboard
+# 1. Konfigurasi Halaman
 st.set_page_config(
     page_title="FMCG Executive Dashboard",
     page_icon="📊",
@@ -14,7 +14,7 @@ st.set_page_config(
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
-    div[data-testid="stMetricValue"] { font-size: 24px; font-weight: bold; }
+    div[data-testid="stMetricValue"] { font-size: 22px; font-weight: bold; }
     .stMetric {
         background-color: #ffffff;
         padding: 16px;
@@ -25,13 +25,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. Ambil Data dari File Parquet (Sangat Cepat & Ringan)
+# 2. Load Data Parquet
 @st.cache_data(ttl=3600)
 def load_data():
     file_path = "fmcg_sales_CLEANED.parquet"
-    
     if not os.path.exists(file_path):
-        st.error(f"File '{file_path}' tidak ditemukan di folder!")
+        st.error(f"File '{file_path}' gak ketemu!")
         st.stop()
         
     df_data = pd.read_parquet(file_path)
@@ -40,8 +39,8 @@ def load_data():
 
 df = load_data()
 
-# 3. Header Dashboard
-st.title("📊 FMCG Executive Performance & Profitability Dashboard")
+# 3. Header
+st.title("📊 FMCG Executive Performance Dashboard")
 st.caption("Monitoring Real-Time Penjualan, Profit Margin, September Drop, dan Stock-Out")
 st.divider()
 
@@ -55,17 +54,36 @@ df_filtered = df[
     (df['category'].isin(selected_category))
 ]
 
-# 5. Top KPI Cards
+# 5. Top KPI Cards (Otomatis Menyesuaikan Skala Angka)
 total_sales = df_filtered['net_sales'].sum()
 total_profit = df_filtered['gross_profit'].sum()
 margin_pct = (total_profit / total_sales * 100) if total_sales > 0 else 0
 total_units = df_filtered['units_sold'].sum()
 
+# Fungsi pembantu format rupiah & unit
+def format_rupiah(val):
+    if abs(val) >= 1e12:
+        return f"Rp {val/1e12:.2f} Triliun"
+    elif abs(val) >= 1e9:
+        return f"Rp {val/1e9:.2f} Miliar"
+    elif abs(val) >= 1e6:
+        return f"Rp {val/1e6:.2f} Juta"
+    else:
+        return f"Rp {val:,.0f}"
+
+def format_unit(val):
+    if val >= 1e6:
+        return f"{val/1e6:.2f} Juta pcs"
+    elif val >= 1e3:
+        return f"{val/1e3:.2f} Ribu pcs"
+    else:
+        return f"{val:,.0f} pcs"
+
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Net Sales", f"Rp {total_sales/1e9:.2f} Miliar")
-col2.metric("Total Profit Kotor", f"Rp {total_profit/1e9:.2f} Miliar")
+col1.metric("Total Net Sales", format_rupiah(total_sales))
+col2.metric("Total Profit Kotor", format_rupiah(total_profit))
 col3.metric("Profit Margin Efektif", f"{margin_pct:.2f}%")
-col4.metric("Total Unit Terjual", f"{total_units/1e6:.2f} Juta pcs")
+col4.metric("Total Unit Terjual", format_unit(total_units))
 
 st.divider()
 
